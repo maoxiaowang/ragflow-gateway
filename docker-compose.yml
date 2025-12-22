@@ -1,0 +1,52 @@
+services:
+  app:
+    image: fastapi-project:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    networks:
+      - fastapi-network
+    command: >
+      sh -c "alembic upgrade head && uvicorn src.app.main:app
+             --host 0.0.0.0 --port 8000 --workers 4"
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-fastapi_db}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - fastapi-network
+
+  redis:
+    image: redis:8.4
+    networks:
+      - fastapi-network
+
+  nginx:
+    image: nginx:stable
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      - app
+    networks:
+      - fastapi-network
+
+volumes:
+  db_data:
+
+networks:
+  fastapi-network:
+    driver: bridge
