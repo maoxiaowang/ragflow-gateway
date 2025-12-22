@@ -53,6 +53,9 @@ uv sync --python 3.13 --frozen
 
 ### 3. 数据库迁移
 ```shell
+# 如果是首次迁移
+alembic revision --autogenerate -m "initial"
+
 alembic upgrade head
 ```
 > 启动开发环境 PostgreSQL 和 Redis：<br>

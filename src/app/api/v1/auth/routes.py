@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.v1.auth.deps import get_user_service
-from app.api.v1.auth.schemas import UserCreate, UserOut, UserLogin, TokenOut, TokenRefresh
+from app.api.v1.auth.schemas import UserOut, UserLogin, TokenOut, TokenRefresh, UserRegister
 from app.core.jwt import create_access_token, create_refresh_token
 from app.schemas.response import Response
 from app.services.auth import UserService
@@ -11,10 +11,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=Response[UserOut])
 async def register(
-        data: UserCreate,
+        data: UserRegister,
         s: UserService = Depends(get_user_service)
 ):
-    user = await s.create_user(data)
+    user = await s.register_user(data)
     return Response(data=UserOut.model_validate(user))
 
 

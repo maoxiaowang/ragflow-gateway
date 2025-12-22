@@ -3,7 +3,11 @@ import os
 import httpx
 from sqlalchemy.util import await_only
 
-from .exceptions import RequestError
+from .exceptions import (
+    RAGFlowRequestError, RAGFlowTimeoutError, RAGFlowResponseError, RAGFlowUnavailableError,
+    RAGFlowError
+)
+
 
 class AsyncHTTPClient:
     def __init__(self, base_url: str, api_key: str = None, timeout=30):
@@ -14,22 +18,25 @@ class AsyncHTTPClient:
         )
 
     async def _request(self, method, path, **kwargs):
-        print("path", path)
         try:
             resp = await self._client.request(method, path, **kwargs)
             resp.raise_for_status()
             data = resp.json()
             if data.get("code") != 0:
-                raise RequestError(f"code error: {data.get('message')}")
+                raise RAGFlowResponseError(f"RAGFlow code error: {data.get('message')}")
             return data
         except httpx.ReadTimeout as e:
-            raise RequestError(f"Request timed out") from e
+            raise RAGFlowTimeoutError("RAGFlow request timed out") from e
         except httpx.RequestError as e:
-            raise RequestError(f"Request failed: {e}") from e
+            raise RAGFlowRequestError(f"RAGFlow request failed: {e}") from e
         except httpx.HTTPStatusError as e:
-            raise RequestError(f"HTTP error {e.response.status_code}: {e}") from e
+            status = e.response.status_code
+            if status >= 500:
+                raise RAGFlowUnavailableError(f"RAGFlow HTTP error {status}") from e
+            else:
+                raise RAGFlowRequestError(f"RAGFlow HTTP error {status}") from e
         except Exception as e:
-            raise RequestError(f"Unexpected error: {e}") from e
+            raise RAGFlowError(f"Unexpected error: {e}") from e
 
     async def get(self, path, params=None, json=None):
         return await self._request("GET", path, params=params, json=json)

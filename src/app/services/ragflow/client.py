@@ -1,26 +1,22 @@
-import os
 from typing import Optional, List
 
+from app.core.settings import settings
 from .exceptions import ResponseError
 from .http import AsyncHTTPClient
-from .modules.dataset import DataSet
+from .modules.agent import Agent
 from .modules.chat import Chat
 from .modules.chunk import Chunk
-from .modules.agent import Agent
+from .modules.dataset import DataSet
 
 
 class AsyncRAGFlow:
     def __init__(self, base_url: str = None, api_key: str = None, version="v1"):
         if not base_url:
-            base_url = os.environ.get("RAGFLOW_BASE_URL")
-            if not base_url:
-                raise EnvironmentError("RAGFLOW_BASE_URL is not set")
+            base_url = settings.ragflow_base_url
         if not api_key:
-            api_key = os.getenv("RAGFLOW_API_KEY")
-            if not api_key:
-                raise EnvironmentError("RAGFLOW_API_KEY is not set")
+            api_key = settings.ragflow_api_key
 
-        timeout = int(os.environ.get("RAGFLOW_TIMEOUT_SECONDS", 30))
+        timeout = settings.ragflow_timeout_seconds
         base_url = f"{base_url}/api/{version}"
         self.http = AsyncHTTPClient(base_url, api_key=api_key, timeout=timeout)
 

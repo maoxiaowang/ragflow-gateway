@@ -1,5 +1,6 @@
 import os
-from typing import Optional
+from enum import Enum
+from typing import Optional, Any
 from urllib.parse import quote_plus
 
 from pydantic import Field, field_validator
@@ -7,36 +8,58 @@ from pydantic_settings import BaseSettings
 
 ENV = os.getenv("ENV", "development").lower()
 
+__all__ = [
+    "Env",
+    "settings"
+]
+
+
+def Env(env_name: str, default: Any=...) -> Any:
+    field_default = default if default is not None else ...
+    return Field(field_default, env=env_name)  # type: ignore
+
+
+class PasswordComplexity(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
 
 class BaseConfig(BaseSettings):
     env: str = Field('development', env="ENV")  # type: ignore
-    log_dir: str = Field('', env="LOG_DIR")
+    log_dir: str = Env("LOG_DIR", "")
 
     # -------- Security --------
-    secret_key: str = Field(..., env="SECRET_KEY")
-    debug: bool = Field(False, env="DEBUG")
-    access_token_expire_minutes: int = Field(30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
-    refresh_token_expire_days: int = Field(7, env="REFRESH_TOKEN_EXPIRE_DAYS")
+    secret_key: str = Env("SECRET_KEY")
+    debug: bool = Env("DEBUG", False)
+    access_token_expire_minutes: int =  Env("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
+    refresh_token_expire_days: int = Env("REFRESH_TOKEN_EXPIRE_DAYS", 7)
 
-    login_url: str = Field('/api/v1/auth/login', env="LOGIN_URL")
+    login_url: str = Env("LOGIN_URL", "/api/v1/auth/login")
+    password_complexity: PasswordComplexity = Env("PASSWORD_COMPLEXITY", "MEDIUM")
 
     # -------- Postgres --------
-    db_host: str = Field(..., env="DB_HOST")
-    db_port: int = Field(..., env="DB_PORT")
-    db_user: str = Field(..., env="DB_USER")
-    db_password: str = Field(..., env="DB_PASSWORD")
-    db_name: str = Field(..., env="DB_NAME")
-    database_url: str = None
+    db_host: str = Env("DB_HOST")
+    db_port: int = Env("DB_PORT")
+    db_user: str = Env("DB_USER")
+    db_password: str = Env("DB_PASSWORD")
+    db_name: str = Env("DB_NAME")
+    database_url: Optional[str] = None
 
     # -------- Redis --------
-    redis_host: str = Field(..., env="REDIS_HOST")
-    redis_port: int = Field(..., env="REDIS_PORT")
-    redis_password: Optional[str] = Field(None, env="REDIS_PASSWORD")
-    redis_default_db: int = Field(0, env="REDIS_DEFAULT_DB")
-    redis_task_db: int = Field(1, env="REDIS_TASK_DB")
+    redis_host: str = Env("REDIS_HOST")
+    redis_port: int = Env("REDIS_PORT")
+    redis_password: Optional[str] = Env("REDIS_PASSWORD", None)
+    redis_default_db: int = Env("REDIS_DEFAULT_DB", 0)
+    redis_task_db: int = Env("REDIS_TASK_DB", 1)
 
-    redis_default_url: str = None
-    redis_task_url: str = None
+    redis_default_url: Optional[str] = None
+    redis_task_url: Optional[str] = None
+
+    # -------- RAGFlow ---------
+    ragflow_base_url: str = Env("RAGFLOW_BASE_URL")
+    ragflow_api_key: str = Env("RAGFLOW_API_KEY")
+    ragflow_timeout_seconds: int = Env("RAGFLOW_TIMEOUT_SECONDS", 30)
 
     class Config:
         env_file = ".env" if ENV == "development" else None
@@ -72,7 +95,6 @@ class BaseConfig(BaseSettings):
         if v is not None:
             return str(v)
         values = info.data
-        print(values)
         user = quote_plus(values['db_user'])
         password = quote_plus(values['db_password'])
         host = values['db_host']
@@ -83,8 +105,8 @@ class BaseConfig(BaseSettings):
 
 class DevelopmentConfig(BaseConfig):
     debug: bool = True
-    access_token_expire_minutes: int = Field(60 * 24 * 30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
-    refresh_token_expire_days: int = Field(90, env="REFRESH_TOKEN_EXPIRE_DAYS")
+    access_token_expire_minutes: int = Env("ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 30)
+    refresh_token_expire_days: int = Env("REFRESH_TOKEN_EXPIRE_DAYS", 90)
 
 
 class TestingConfig(BaseConfig):
@@ -101,10 +123,10 @@ class ProductionConfig(BaseConfig):
 
 # 根据 ENV 选择配置
 if ENV == "production":
-    settings = ProductionConfig()
+    settings = ProductionConfig()  # type: ignore
 elif ENV == "testing":
-    settings = TestingConfig()
+    settings = TestingConfig()  # type: ignore
 elif ENV == "staging":
-    settings = StagingConfig()
+    settings = StagingConfig()  # type: ignore
 else:
-    settings = DevelopmentConfig()
+    settings = DevelopmentConfig()  # type: ignore

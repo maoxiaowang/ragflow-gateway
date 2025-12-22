@@ -1,24 +1,50 @@
+from starlette import status
+
 from app.core.exceptions import ServiceError
 
 
 class RAGFlowError(ServiceError):
     """
-    RAGFlow 客户端异常
+    RAGFlow 服务异常
     """
+    code = 51001
+    status_code = status.HTTP_502_BAD_GATEWAY
 
     def __init__(self, message: str = "RAGFlow request error", code: int = 10001, detail: str = None):
         super().__init__(message=message, code=code, detail=detail)
 
 
-class RequestError(RAGFlowError):
+class RAGFlowTimeoutError(RAGFlowError):
     """
-    RAGFlow 后端请求失败异常
+    RAGFlow 请求超时
     """
-    pass
+    code = 51002
+    status_code = status.HTTP_504_GATEWAY_TIMEOUT
+    message = "RAGFlow service timeout"
 
 
-class ResponseError(RAGFlowError):
+class RAGFlowUnavailableError(RAGFlowError):
     """
-    RAGFlow 后端返回结果异常
+    RAGFlow 服务不可用
     """
-    pass
+    code = 51003
+    status_code = 503
+    message = "RAGFlow service unavailable"
+
+
+class RAGFlowRequestError(RAGFlowError):
+    """
+    RAGFlow 请求失败异常
+    """
+    code = 51004
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    message = "RAGFlow request error"
+
+
+class RAGFlowResponseError(RAGFlowError):
+    """
+    RAGFlow 返回结果异常
+    """
+    code = 51005
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    message = "RAGFlow response error"

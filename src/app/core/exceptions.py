@@ -6,9 +6,9 @@ from fastapi import status
 class ServiceError(Exception):
     """业务异常基类"""
 
-    code: int = 10000
-    status_code: int = status.HTTP_400_BAD_REQUEST
-    message: str = "Service error"
+    code: int = 50001
+    status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+    message: str = "Internal service error"
 
     def __init__(
             self,
@@ -33,6 +33,16 @@ class UnauthorizedError(ServiceError):
     message = "Authentication failed"
 
 
+class TokenInvalidError(UnauthorizedError):
+    code = 40102
+    message = "Token is invalid."
+
+
+class TokenExpiredError(UnauthorizedError):
+    code = 40103
+    message = "Token has expired."
+
+
 class PermissionDeniedError(ServiceError):
     code = 40301
     status_code = status.HTTP_403_FORBIDDEN
@@ -49,9 +59,3 @@ class ConflictError(ServiceError):
     code = 40901
     status_code = status.HTTP_409_CONFLICT
     message = "Resource conflict"
-
-
-class ValidationError(ServiceError):
-    code = 42201
-    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
-    message = "Invalid data"

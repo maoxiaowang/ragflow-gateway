@@ -1,5 +1,3 @@
-from functools import wraps
-
 from fastapi import Request, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 
@@ -16,11 +14,8 @@ class ServiceOAuth2PasswordBearer(OAuth2PasswordBearer):
             if e.status_code == 401:
                 raise UnauthorizedError("Token missing or invalid")
             raise
-
-        # 验证 token 是否有效
-        if not verify_token(token):
-            raise UnauthorizedError("Token invalid or expired")
         return token
+
 
 oauth2_scheme = ServiceOAuth2PasswordBearer(settings.login_url)
 
@@ -31,5 +26,5 @@ async def login_required(token: str = Depends(oauth2_scheme)) -> dict:
     """
     payload = verify_token(token)
     if not payload or payload.get("sub") is None:
-        raise UnauthorizedError()
+        raise UnauthorizedError("Token payload missing subject")
     return payload

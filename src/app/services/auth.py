@@ -1,4 +1,4 @@
-from app.api.v1.auth.schemas import UserCreate
+from app.api.v1.auth.schemas import UserCreate, UserRegister
 from app.core.exceptions import UnauthorizedError, ConflictError
 from app.core.jwt import create_access_token, create_refresh_token, verify_token
 from app.models.auth import User
@@ -16,6 +16,12 @@ class UserService(BaseService[User]):
             user = await self.repo.get_by_username(self.db, username)
             if user:
                 raise ConflictError(f"Username '{username}' already exists")
+
+    async def register_user(self, data: UserRegister):
+        username = data.username
+        password1 = data.password1
+        register_data = UserCreate(username=username, password=password1)
+        return await self.create_user(register_data)
 
     async def create_user(self, data: UserCreate) -> User:
         await self.check_before_create(data.model_dump())

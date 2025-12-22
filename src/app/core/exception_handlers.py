@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -16,11 +16,11 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         return JSONResponse(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
-                "code": 422,
+                "code": 42201,
                 "message": "request validation error",
-                "detail": exc.errors() if settings.debug else None,
+                "detail": exc.errors(),
                 "data": None
             }
         )
@@ -30,7 +30,7 @@ def register_exception_handlers(app: FastAPI):
         return JSONResponse(
             status_code=exc.status_code,
             content={
-                "code": exc.status_code,
+                "code": 50002,
                 "message": exc.detail,
                 "detail": None,
                 "data": None
@@ -53,9 +53,9 @@ def register_exception_handlers(app: FastAPI):
     async def all_exception_handler(request: Request, exc: Exception):
         logger.error("Unexpected error", exc_info=exc)
         return JSONResponse(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
-                "code": 500,
+                "code": 50003,
                 "message": "internal server error",
                 "detail": str(exc) if settings.debug else None,     # 生产隐藏细节
                 "data": None

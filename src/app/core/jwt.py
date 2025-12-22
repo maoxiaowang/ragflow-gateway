@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
-from jose import jwt, JWTError
+from jose import jwt, JWTError, ExpiredSignatureError
 
+from app.core.exceptions import TokenExpiredError, TokenInvalidError
 from app.core.settings import settings
 
 JWT_ALGORITHM = "HS256"
@@ -29,12 +31,25 @@ def create_refresh_token(user_id: int):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
-def verify_token(token: str):
+def verify_token(token: str, *, expected_type: str | None = None,) -> dict[str, Any]:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[JWT_ALGORITHM],
+        )
+    except ExpiredSignatureError:
+        raise TokenExpiredError()
     except JWTError:
-        return None
+        raise TokenInvalidError()
+
+    token_type = payload.get("type")
+    if expected_type and token_type != expected_type:
+        raise TokenInvalidError(
+            f"Expected {expected_type} token, got {token_type}"
+        )
+
+    return payload
 
 
 def decode_token(token: str):

@@ -9,7 +9,7 @@ from app.core.logging import setup_logging
 setup_logging()
 
 # Initialize app
-app = FastAPI(title="Library API", lifespan=lifespan)
+app = FastAPI(title="RAGFlow Gateway", lifespan=lifespan)
 
 # Exception handlers
 register_exception_handlers(app)
