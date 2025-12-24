@@ -42,7 +42,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY src src
 COPY alembic alembic
 
-COPY entrypoint.sh /entrypoint.sh
+COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
     && chown -R app:app /ragflow-gateway /entrypoint.sh
 
