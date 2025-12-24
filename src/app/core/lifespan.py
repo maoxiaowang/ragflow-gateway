@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # 启动逻辑（可选）
     redis = Redis.from_url(
-        str(settings.redis_default_url),
+        str(settings.redis.default_dsn),
         encoding="utf-8",
         decode_responses=True,
     )

@@ -1,11 +1,11 @@
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 from urllib.parse import quote_plus
 
-from pydantic import Field, model_validator
-from pydantic_settings import BaseSettings
+from pydantic import Field, model_validator, BaseModel, PostgresDsn, RedisDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
     "settings"
@@ -18,14 +18,9 @@ class EnvEnum(str, Enum):
     dev = "DEV"
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-print(BASE_DIR)
+BASE_DIR = Path(__file__).resolve().parent.parent  # code directory
+ROOT_DIR = BASE_DIR.parent.parent  # project directory
 ENV = os.getenv("ENV", EnvEnum.dev.value).upper()
-
-
-def Env(env_name: str, default: Any = ...) -> Any:
-    field_default = default if default is not None else ...
-    return Field(field_default, env=env_name)  # type: ignore
 
 
 class PasswordComplexity(str, Enum):
@@ -34,81 +29,89 @@ class PasswordComplexity(str, Enum):
     HIGH = "HIGH"
 
 
+class DBConfig(BaseModel):
+    host: str = "127.0.0.1"
+    port: int = 5432
+    user: str = "root"
+    password: str
+    name: str = "ragflow_gateway"
+    dsn: Optional[PostgresDsn] = None
+    model_config = SettingsConfigDict(env_prefix="DB_")
+
+
+class RedisConfig(BaseModel):
+    host: str = "127.0.0.1"
+    port: int = 6379
+    password: str
+    default_db: int = 0
+    task_db: int = 1
+    default_dsn: Optional[RedisDsn] = None
+    task_dsn: Optional[RedisDsn] = None
+    model_config = SettingsConfigDict(env_prefix="REDIS_")
+
+
+class RAGFlowConfig(BaseSettings):
+    base_url: str
+    api_key: str
+    timeout_seconds: int = 10
+
+    model_config = SettingsConfigDict(env_prefix="RAG_")
+
+
 class BaseConfig(BaseSettings):
-    env: str = Env("ENV", EnvEnum.dev.value)  # type: ignore
-    log_dir: str = Env("LOG_DIR", "")
-    upload_dir: str = Env("UPLOAD_DIR", "")
+    # 基础配置
+    env: str = Field(EnvEnum.dev.value)
+    log_dir: str = Field(ROOT_DIR / "logs")
+    upload_dir: str = Field(ROOT_DIR / "uploads")
+    login_url: Optional[str] = Field("/api/v1/auth/login")
 
-    # -------- Security --------
-    secret_key: str = Env("SECRET_KEY")
-    debug: bool = Env("DEBUG", False)
-    access_token_expire_minutes: int = Env("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
-    refresh_token_expire_days: int = Env("REFRESH_TOKEN_EXPIRE_DAYS", 7)
+    # 安全配置
+    secret_key: str = Field(...)
+    debug: Optional[bool] = Field(False)
+    access_token_expire_minutes: Optional[int] = Field(30)
+    refresh_token_expire_days: Optional[int] = Field(7)
+    password_complexity: Optional[str] = Field("HIGH")
 
-    login_url: str = Env("LOGIN_URL", "/api/v1/auth/login")
-    password_complexity: PasswordComplexity = Env("PASSWORD_COMPLEXITY", "HIGH")
+    # 模块配置
+    redis: RedisConfig
+    db: DBConfig
+    ragflow: RAGFlowConfig
 
-    # -------- Postgres --------
-    db_host: str = Env("DB_HOST")
-    db_port: int = Env("DB_PORT")
-    db_user: str = Env("DB_USER")
-    db_password: str = Env("DB_PASSWORD")
-    db_name: str = Env("DB_NAME")
-    database_url: Optional[str] = None
-
-    # -------- Redis --------
-    redis_host: str = Env("REDIS_HOST")
-    redis_port: int = Env("REDIS_PORT")
-    redis_password: Optional[str] = Env("REDIS_PASSWORD", None)
-    redis_default_db: int = Env("REDIS_DEFAULT_DB", 0)
-    redis_task_db: int = Env("REDIS_TASK_DB", 1)
-
-    redis_default_url: Optional[str] = None
-    redis_task_url: Optional[str] = None
-
-    # -------- RAGFlow ---------
-    ragflow_base_url: str = Env("RAGFLOW_BASE_URL")
-    ragflow_api_key: str = Env("RAGFLOW_API_KEY")
-    ragflow_timeout_seconds: int = Env("RAGFLOW_TIMEOUT_SECONDS", 30)
-
-    class Config:
-        env_file = str(BASE_DIR.parent.parent / ".env") if ENV == EnvEnum.dev.value else None
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_nested_delimiter='_',
+        env_nested_max_split=1,
+        env_file=ROOT_DIR / ".env" if ENV == EnvEnum.dev.value else None,
+        env_file_encoding="utf-8"
+    )
 
     def _construct_redis_url(self, db):
-        pwd = self.redis_password
-        host = self.redis_host
-        port = self.redis_port
-
-        if pwd:
-            return f"redis://:{pwd}@{host}:{port}/{db}"
-        return f"redis://{host}:{port}/{db}"
+        if self.redis.password:
+            return f"redis://:{self.redis.password}@{self.redis.host}:{self.redis.port}/{db}"
+        return f"redis://{self.redis.host}:{self.redis.port}/{db}"
 
     @model_validator(mode="after")
     def build_urls(self):
-        # ---------- Database URL ----------
-        if not self.database_url:
-            user = quote_plus(self.db_user)
-            password = quote_plus(self.db_password)
-            host = self.db_host
-            port = self.db_port
-            dbname = self.db_name
-            self.database_url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{dbname}"
+        if not self.db.dsn:
+            user = quote_plus(self.db.user)
+            password = quote_plus(self.db.password)
+            self.db.dsn = PostgresDsn(
+                f"postgresql+asyncpg://{user}:{password}"
+                f"@{self.db.host}:{self.db.port}/{self.db.name}"
+            )
 
-        # ---------- Redis URL ----------
-        if not self.redis_default_url:
-            self.redis_default_url = self._construct_redis_url(self.redis_default_db)
+        if not self.redis.default_dsn:
+            self.redis.default_dsn = RedisDsn(self._construct_redis_url(self.redis.default_db))
 
-        if not self.redis_task_url:
-            self.redis_task_url = self._construct_redis_url(self.redis_task_db)
+        if not self.redis.task_dsn:
+            self.redis.task_dsn = RedisDsn(self._construct_redis_url(self.redis.task_db))
 
         return self
 
 
 class DevelopmentConfig(BaseConfig):
     debug: bool = True
-    access_token_expire_minutes: int = Env("ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 30)
-    refresh_token_expire_days: int = Env("REFRESH_TOKEN_EXPIRE_DAYS", 90)
+    access_token_expire_minutes: int = Field(60 * 24 * 30)
+    refresh_token_expire_days: int = Field(90)
 
 
 class TestingConfig(BaseConfig):
@@ -129,4 +132,4 @@ _config_map = {
     EnvEnum.test.value: TestingConfig,
     EnvEnum.dev.value: DevelopmentConfig,
 }
-settings = _config_map.get(ENV, DevelopmentConfig)()
+settings = _config_map.get(ENV, DevelopmentConfig)()  # type: ignore

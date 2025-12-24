@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base
 
 from app.core.settings import settings
 
-engine = create_async_engine(settings.database_url, echo=settings.debug)
+engine = create_async_engine(str(settings.db.dsn), echo=settings.debug)
 async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 Base = declarative_base()
 
