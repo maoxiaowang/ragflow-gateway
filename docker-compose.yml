@@ -1,6 +1,6 @@
 services:
   app:
-    image: fastapi-project:latest
+    image: ragflow-gateway:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,7 +10,10 @@ services:
       - db
       - redis
     networks:
-      - fastapi-network
+      - ragflow-gateway
+    volumes:
+      - ./logs:${LOG_DIR}
+      - ./uploads:${UPLOAD_DIR}
     command: >
       sh -c "alembic upgrade head && uvicorn src.app.main:app
              --host 0.0.0.0 --port 8000 --workers 4"
@@ -24,12 +27,12 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
-      - fastapi-network
+      - ragflow-gateway
 
   redis:
     image: redis:8.4
     networks:
-      - fastapi-network
+      - ragflow-gateway
 
   nginx:
     image: nginx:stable
@@ -42,11 +45,11 @@ services:
     depends_on:
       - app
     networks:
-      - fastapi-network
+      - ragflow-gateway
 
 volumes:
   db_data:
 
 networks:
-  fastapi-network:
+  ragflow-gateway:
     driver: bridge
