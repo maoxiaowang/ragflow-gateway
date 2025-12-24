@@ -48,7 +48,7 @@ class BaseService(Generic[T]):
             page_size: int = 10,
             filters: dict | None = None,
             order_by: str | None = None,
-            desc_order: bool = False,
+            desc: bool = False,
             detail: bool = False,
     ) -> Tuple[List[T], int]:
         items, total = await self.repo.get_paged(
@@ -57,7 +57,7 @@ class BaseService(Generic[T]):
             page_size=page_size,
             filters=filters,
             order_by=order_by,
-            desc_order=desc_order,
+            desc_order=desc,
             preload_options=self.preload_options if detail else None,
         )
         return items, total

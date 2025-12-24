@@ -51,8 +51,9 @@ class RedisConfig(BaseModel):
 
 
 class RAGFlowConfig(BaseSettings):
-    base_url: str
+    origin_url: str
     api_key: str
+    api_version: str = "v1"
     timeout_seconds: int = 10
 
     model_config = SettingsConfigDict(env_prefix="RAG_")

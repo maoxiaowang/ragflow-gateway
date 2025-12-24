@@ -1,25 +1,29 @@
-import os
+import logging
+from pathlib import PurePosixPath
+from urllib.parse import urljoin
 
 import httpx
-from sqlalchemy.util import await_only
 
 from .exceptions import (
     RAGFlowRequestError, RAGFlowTimeoutError, RAGFlowResponseError, RAGFlowUnavailableError,
     RAGFlowError
 )
 
+logger = logging.getLogger(__name__)
+
 
 class AsyncHTTPClient:
-    def __init__(self, base_url: str, api_key: str = None, timeout=30):
+    def __init__(self, base_url: str, api_key, timeout=5):
         self._client = httpx.AsyncClient(
-            base_url=base_url,
             timeout=timeout,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         )
+        self.base_url = base_url.rstrip("/")
 
     async def _request(self, method, path, **kwargs):
+        url = self.base_url + '/' + path.lstrip('/')
         try:
-            resp = await self._client.request(method, path, **kwargs)
+            resp = await self._client.request(method, url, **kwargs)
             resp.raise_for_status()
             data = resp.json()
             if data.get("code") != 0:
@@ -36,6 +40,7 @@ class AsyncHTTPClient:
             else:
                 raise RAGFlowRequestError(f"RAGFlow HTTP error {status}") from e
         except Exception as e:
+            logger.error(f"RAGFlow request failed: {e}")
             raise RAGFlowError(f"Unexpected error: {e}") from e
 
     async def get(self, path, params=None, json=None):

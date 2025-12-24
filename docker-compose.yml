@@ -1,5 +1,6 @@
+name: ragflow_gateway
 services:
-  app:
+  api:
     image: ragflow-gateway:latest
     build:
       context: .
@@ -10,7 +11,7 @@ services:
       - db
       - redis
     networks:
-      - ragflow-gateway
+      - network
     volumes:
       - ./logs:${LOG_DIR}
       - ./uploads:${UPLOAD_DIR}
@@ -27,12 +28,12 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
-      - ragflow-gateway
+      - network
 
   redis:
     image: redis:8.4
     networks:
-      - ragflow-gateway
+      - network
 
   nginx:
     image: nginx:stable
@@ -45,11 +46,11 @@ services:
     depends_on:
       - app
     networks:
-      - ragflow-gateway
+      - network
 
 volumes:
   db_data:
 
 networks:
-  ragflow-gateway:
+  network:
     driver: bridge

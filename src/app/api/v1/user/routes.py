@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Query, Depends
 
 from app.api.v1.auth.deps import get_user_service
@@ -14,14 +16,14 @@ async def list_users(
         page: int = Query(1, ge=1),
         page_size: int = Query(10, ge=1, le=100),
         order_by: str | None = Query(None),
-        desc_order: bool = Query(False),
+        desc: bool = Query(False),
         service: UserService = Depends(get_user_service)
 ):
     items, total = await service.get_paged(
         page=page,
         page_size=page_size,
         order_by=order_by,
-        desc_order=desc_order,
+        desc=desc,
     )
 
     page_data = PageData(

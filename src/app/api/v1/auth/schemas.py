@@ -90,9 +90,9 @@ class UserRegister(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
-    nickname: str
+    nickname: str | None = None
     is_active: bool
-    avatar: str
+    avatar: str | None = None
     created_at: datetime
     updated_at: datetime
 
