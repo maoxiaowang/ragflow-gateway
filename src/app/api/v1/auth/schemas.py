@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from functools import partial
 from typing import Optional
 
@@ -89,7 +90,11 @@ class UserRegister(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
+    nickname: str
     is_active: bool
+    avatar: str
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True

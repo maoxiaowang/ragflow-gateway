@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
+from app.models.mixin import TimestampMixin
 
 auth_user_roles = Table(
     "auth_user_roles",
@@ -18,12 +19,15 @@ auth_role_permissions = Table(
 )
 
 
-class User(Base):
+class User(TimestampMixin, Base):
     __tablename__ = "auth_users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
+    nickname = Column(String)
+    avatar = Column(String)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+
     roles = relationship("Role", secondary=auth_user_roles, back_populates="users")
 
 
