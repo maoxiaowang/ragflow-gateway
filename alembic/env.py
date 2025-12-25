@@ -16,7 +16,7 @@ from app.core.settings import settings
 
 _ = app.models
 
-DATABASE_URL = settings.database_url
+DATABASE_URL = str(settings.db.dsn)
 
 config = context.config
 fileConfig(config.config_file_name)

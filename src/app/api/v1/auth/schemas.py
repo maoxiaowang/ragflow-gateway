@@ -69,20 +69,20 @@ class UserRegister(BaseModel):
     password1: str = Field(..., min_length=6)
     password2: str = Field(..., min_length=6)
 
-    @field_validator('password1')
+    @field_validator("password1")
     @classmethod
     def validate_password1(cls, v):
         return validate_complexity(v)
 
-    @field_validator('password2')
+    @field_validator("password2")
     @classmethod
     def passwords_match(cls, v, info):
         validate_complexity(v)
-        password1 = info.data.get('password1')
+        password1 = info.data.get("password1")
         if password1 is not None and v != password1:
             raise PydanticCustomError(
-                'password_mismatch',
-                'Passwords do not match'
+                "password_mismatch",
+                "Passwords do not match"
             )
         return v
 
@@ -115,12 +115,12 @@ class UserLogin(BaseModel):
 class TokenRefresh(BaseModel):
     refresh_token: str = Field(..., min_length=20, max_length=512)
 
-    @field_validator('refresh_token')
+    @field_validator("refresh_token")
     @classmethod
     def validate_format(cls, v):
         if not re.fullmatch(r"[A-Za-z0-9._~-]+", v):
             raise PydanticCustomError(
-                'invalid_token_format',
-                'Invalid token format of refresh token.'
+                "invalid_token_format",
+                "Invalid token format of refresh token."
             )
         return v

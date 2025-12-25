@@ -37,7 +37,7 @@ class UserService(BaseService[User]):
     async def authenticate(self, username: str, password: str) -> User | None:
         user = await self.repo.authenticate(self.db, username, password)
         if not user:
-            raise UnauthorizedError
+            raise UnauthorizedError()
         return user
 
     async def login(self, username: str, password: str) -> dict[str, str]:

@@ -17,20 +17,16 @@ async def list_datasets(
         order_by: str | None = Query(None),
         desc: bool = Query(True)
 ):
-    print('start list_datasets')
     items, total = await service.list_datasets(
         page=page,
         page_size=page_size,
         order_by=order_by,
         desc=desc,
     )
-    print('total items', total)
-
     page_data = PageData(
         total=total,
         page=page,
         page_size=page_size,
         items=items
     )
-    print('page_data', page_data)
     return Response(data=page_data)

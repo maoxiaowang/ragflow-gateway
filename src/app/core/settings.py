@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus
 
-from pydantic import Field, model_validator, BaseModel, PostgresDsn, RedisDsn
+from pydantic import Field, model_validator, BaseModel, PostgresDsn, RedisDsn, AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
@@ -72,6 +72,7 @@ class BaseConfig(BaseSettings):
     access_token_expire_minutes: Optional[int] = Field(30)
     refresh_token_expire_days: Optional[int] = Field(7)
     password_complexity: Optional[str] = Field("HIGH")
+    cors_origins: Optional[list[AnyUrl]] = Field(list())
 
     # 模块配置
     redis: RedisConfig
@@ -79,7 +80,7 @@ class BaseConfig(BaseSettings):
     ragflow: RAGFlowConfig
 
     model_config = SettingsConfigDict(
-        env_nested_delimiter='_',
+        env_nested_delimiter="_",
         env_nested_max_split=1,
         env_file=ROOT_DIR / ".env" if ENV == EnvEnum.dev.value else None,
         env_file_encoding="utf-8"
@@ -105,7 +106,12 @@ class BaseConfig(BaseSettings):
 
         if not self.redis.task_dsn:
             self.redis.task_dsn = RedisDsn(self._construct_redis_url(self.redis.task_db))
+        return self
 
+    @model_validator(mode="before")
+    def origin_before(self):
+        cors_origins = self.get("cors_origins")
+        self["cors_origins"] = [item.strip().rstrip("/") for item in cors_origins.split(",")]
         return self
 
 

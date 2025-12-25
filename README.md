@@ -49,6 +49,20 @@ cd ragflow-gateway
 ```shell
 pip install uv
 uv sync --python 3.13 --frozen
+
+# 激活虚拟环境
+.\.venv\Scripts\activate  #（Windows）
+source ./.venv/
+```
+
+### 3. 配置环境变量文件
+复制 `.env.example` 到 `.env`，并根据实际修改 `.env` 文件内容。
+
+- secret key 可以通过下面办法生成 <br>
+```python
+import secrets
+SECRET_KEY = secrets.token_urlsafe(32)
+print(SECRET_KEY)
 ```
 
 ### 3. 数据库迁移
@@ -59,8 +73,10 @@ alembic revision --autogenerate -m "initial"
 # 执行迁移
 alembic upgrade head
 ```
-> 启动开发环境 PostgreSQL 和 Redis：<br>
-> docker-compose --env-file .env -f docker-compose.dev.yml up -d
+- 快速启动开发环境 PostgreSQL 和 Redis：<br>
+
+> docker compose --env-file .env -f docker-compose.dev.yml up -d
+
 
 ### 4. 开发模式运行
 ```shell

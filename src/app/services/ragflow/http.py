@@ -1,6 +1,4 @@
 import logging
-from pathlib import PurePosixPath
-from urllib.parse import urljoin
 
 import httpx
 
@@ -21,7 +19,7 @@ class AsyncHTTPClient:
         self.base_url = base_url.rstrip("/")
 
     async def _request(self, method, path, **kwargs):
-        url = self.base_url + '/' + path.lstrip('/')
+        url = self.base_url + "/" + path.lstrip("/")
         try:
             resp = await self._client.request(method, url, **kwargs)
             resp.raise_for_status()

@@ -16,7 +16,7 @@ class RAGFlowService:
             self,
             page: int = 1,
             page_size: int = 30,
-            order_by: Optional[str] = 'create_time',
+            order_by: Optional[str] = "create_time",
             desc: bool = True,
             name: Optional[str] = None,
             _id: Optional[int] = None,

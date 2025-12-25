@@ -23,13 +23,8 @@ async def login(
         data: UserLogin,
         s: UserService = Depends(get_user_service)
 ):
-    user = await s.authenticate(data.username, data.password)
-    access_token = create_access_token(user.id)
-    refresh_token = create_refresh_token(user.id)
-    data = TokenOut(
-        access_token=access_token,
-        refresh_token=refresh_token
-    ).model_dump()
+    tokens = await s.login(data.username, data.password)
+    data = TokenOut(**tokens).model_dump()
     return Response(data=data)
 
 
