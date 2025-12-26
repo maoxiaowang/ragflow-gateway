@@ -14,6 +14,7 @@ class AsyncHTTPClient:
     def __init__(self, base_url: str, api_key, timeout=5):
         self._client = httpx.AsyncClient(
             timeout=timeout,
+            trust_env=False,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         )
         self.base_url = base_url.rstrip("/")
