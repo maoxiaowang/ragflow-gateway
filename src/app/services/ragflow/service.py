@@ -1,8 +1,9 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from urllib.parse import urljoin
 
+from fastapi import UploadFile
+
 from app.core.settings import settings
-from app.services.ragflow.exceptions import RAGFlowError
 from app.services.ragflow.http import AsyncHTTPClient
 
 
@@ -12,43 +13,23 @@ class RAGFlowService:
         base_url = urljoin(origin_url, f"/api/{api_version}")
         self.client = AsyncHTTPClient(base_url, api_key)
 
-    async def list_datasets(
-            self,
-            page: int = 1,
-            page_size: int = 30,
-            order_by: Optional[str] = "create_time",
-            desc: bool = True,
-            name: Optional[str] = None,
-            _id: Optional[int] = None,
-    ) -> Tuple[List, int]:
+    @staticmethod
+    def _clean_query_params(params: dict[str, Any]) -> dict[str, Any]:
+        return {k: v for k, v in params.items() if v is not None}
+
+    async def list_datasets(self, **kwargs) -> Tuple[List, int]:
         """
         获取数据集列表，支持分页、排序和过滤
         """
-        params = {
-            "page": page,
-            "page_size": page_size,
-            "orderby": order_by,
-            "desc": desc,
-            "name": name,
-            "id": _id,
-        }
+        params = self._clean_query_params(kwargs)
+        resp = await self.client.get("/datasets", params=params)
+        return resp.get("data", {}), resp.get("total_datasets", 0)
 
-        params = {k: v for k, v in params.items() if v is not None}
-        try:
-            resp = await self.client.get("/datasets", params=params)
-            return resp.get("data", {}), resp.get("total_datasets", 0)
-        except RAGFlowError as e:
-            print(e)
-            raise
-
-    # async def create_dataset(self, name: str, description: Optional[str] = None) -> Dict[str, Any]:
-    #     """创建数据集"""
-    #     payload = {"name": name, "description": description}
-    #     try:
-    #         resp = await self.client.post("/datasets", json=payload)
-    #         return resp.get("data", {})
-    #     except RAGFlowError as e:
-    #         raise
+    async def create_dataset(self, name: str, description: Optional[str] = None) -> Dict[str, Any]:
+        """创建数据集"""
+        payload = {"name": name, "description": description}
+        resp = await self.client.post("/datasets", json=payload)
+        return resp.get("data", {})
 
     # async def get_dataset(self, dataset_id: int) -> Dict[str, Any]:
     #     """获取单个数据集"""
@@ -73,6 +54,22 @@ class RAGFlowService:
     #         return resp.get("data", {})
     #     except RAGFlowError as e:
     #         raise
+
+    async def list_documents(self, dataset_id: str, **kwargs) -> Tuple[List, int]:
+        params = self._clean_query_params(kwargs)
+        resp = await self.client.get(f"/datasets/{dataset_id}/documents", params=params)
+        data = resp.get("data", {})
+        return data.get("docs", []), data.get("total", 0)
+
+    async def upload_document(self, dataset_id: str, files: List[UploadFile]):
+        files_to_send = [
+            ("file", (f.filename, await f.read(), f.content_type or "application/octet-stream"))
+            for f in files
+        ]
+
+        resp = await self.client.post(f"/datasets/{dataset_id}/documents", files=files_to_send)
+        docs = resp.get("data", [])
+        return docs, len(docs)
 
     async def close(self):
         await self.client.close()

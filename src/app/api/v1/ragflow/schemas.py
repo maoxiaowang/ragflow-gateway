@@ -23,3 +23,32 @@ class DatasetList(BaseModel):
     code: int
     data: List[Dataset]
     total_datasets: int
+
+
+class Document(BaseModel):
+    id: str
+    name: str
+    location: str
+    chunk_count: int
+    progress: float
+    run: str
+    size: int
+    suffix: str
+    type: str
+    create_date: str
+    create_time: int
+    process_begin_at: Optional[str] = None
+    process_duration: float
+    status: str
+
+
+class UploadDocument(BaseModel):
+    """
+    上传后的返回
+    """
+    id: str
+    name: str
+    location: str
+    run: str
+    size: int
+    suffix: str

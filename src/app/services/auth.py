@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from app.api.v1.auth.schemas import UserCreate, UserRegister
 from app.core.exceptions import UnauthorizedError, ConflictError
 from app.core.jwt import create_access_token, create_refresh_token, verify_token
+from app.core.settings import settings
 from app.models.auth import User
 from app.repositories.auth import UserRepo
 from app.services.base import BaseService
@@ -53,5 +56,5 @@ class UserService(BaseService[User]):
             raise UnauthorizedError("Token invalid or expired")
         user_id = payload["sub"]
         # 扩展操作，可以在这里检查用户是否被禁用
-        access_token = create_access_token(user_id)
+        access_token = create_access_token(user_id, timedelta(days=settings.refresh_token_expire_days))
         return {"access_token": access_token, "token_type": "bearer"}

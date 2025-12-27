@@ -15,7 +15,7 @@ class AsyncHTTPClient:
         self._client = httpx.AsyncClient(
             timeout=timeout,
             trust_env=False,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {api_key}"},
         )
         self.base_url = base_url.rstrip("/")
 
@@ -45,8 +45,8 @@ class AsyncHTTPClient:
     async def get(self, path, params=None, json=None):
         return await self._request("GET", path, params=params, json=json)
 
-    async def post(self, path, json=None, files=None):
-        return await self._request("POST", path, json=json, files=files)
+    async def post(self, path, json=None, files=None, **kwargs):
+        return await self._request("POST", path, json=json, files=files, **kwargs)
 
     async def put(self, path, json=None):
         return await self._request("PUT", path, json=json)
