@@ -1,6 +1,8 @@
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, constr, Field
+
+NonEmptyStr = constr(min_length=1, strip_whitespace=True)
 
 
 class Dataset(BaseModel):
@@ -42,7 +44,7 @@ class Document(BaseModel):
     status: str
 
 
-class UploadDocument(BaseModel):
+class UploadDocumentResponse(BaseModel):
     """
     上传后的返回
     """
@@ -52,3 +54,18 @@ class UploadDocument(BaseModel):
     run: str
     size: int
     suffix: str
+
+
+class HandleDocumentsResponse(BaseModel):
+    """
+    删除，解析等
+    """
+    code: int
+
+
+class HandleDocumentsRequest(BaseModel):
+    document_ids: List[NonEmptyStr] = Field(..., min_length=1)
+
+
+class HandleChunksRequest(BaseModel):
+    chunks_ids: Optional[List[NonEmptyStr]] = Field([], min_length=1)

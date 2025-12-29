@@ -8,68 +8,123 @@ from app.services.ragflow.http import AsyncHTTPClient
 
 
 class RAGFlowService:
+    DATASETS_PATH = "/datasets"
+
     def __init__(self, origin_url: str, api_key: str):
         api_version = settings.ragflow.api_version
         base_url = urljoin(origin_url, f"/api/{api_version}")
         self.client = AsyncHTTPClient(base_url, api_key)
 
     @staticmethod
-    def _clean_query_params(params: dict[str, Any]) -> dict[str, Any]:
+    def _clean_query_params(params: Dict[str, Any]) -> Dict[str, Any]:
         return {k: v for k, v in params.items() if v is not None}
 
-    async def list_datasets(self, **kwargs) -> Tuple[List, int]:
-        """
-        获取数据集列表，支持分页、排序和过滤
-        """
-        params = self._clean_query_params(kwargs)
-        resp = await self.client.get("/datasets", params=params)
-        return resp.get("data", {}), resp.get("total_datasets", 0)
+    # ===== Dataset =====
 
-    async def create_dataset(self, name: str, description: Optional[str] = None) -> Dict[str, Any]:
-        """创建数据集"""
-        payload = {"name": name, "description": description}
-        resp = await self.client.post("/datasets", json=payload)
+    async def list_datasets(self, **kwargs) -> Tuple[List[Dict[str, Any]], int]:
+        params = self._clean_query_params(kwargs)
+        print(params)
+        resp = await self.client.get(self.DATASETS_PATH, params=params)
+
+        return (
+            resp.get("data", []),
+            resp.get("total_datasets", 0),
+        )
+
+    async def create_dataset(
+            self,
+            name: str,
+            description: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        payload = self._clean_query_params(
+            {"name": name, "description": description}
+        )
+        resp = await self.client.post(self.DATASETS_PATH, json=payload)
         return resp.get("data", {})
 
-    # async def get_dataset(self, dataset_id: int) -> Dict[str, Any]:
-    #     """获取单个数据集"""
-    #     try:
-    #         resp = await self.client.get(f"/datasets/{dataset_id}")
-    #         return resp.get("data", {})
-    #     except RAGFlowError as e:
-    #         raise
+    # ===== Documents =====
 
-    # async def update_dataset(self, dataset_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-    #     """更新数据集"""
-    #     try:
-    #         resp = await self.client.put(f"/datasets/{dataset_id}", json=data)
-    #         return resp.get("data", {})
-    #     except RAGFlowError as e:
-    #         raise
-    #
-    # async def delete_dataset(self, dataset_id: int) -> Dict[str, Any]:
-    #     """删除数据集"""
-    #     try:
-    #         resp = await self.client.delete(f"/datasets/{dataset_id}")
-    #         return resp.get("data", {})
-    #     except RAGFlowError as e:
-    #         raise
-
-    async def list_documents(self, dataset_id: str, **kwargs) -> Tuple[List, int]:
+    async def list_documents(
+            self,
+            dataset_id: str,
+            **kwargs,
+    ) -> Tuple[List[Dict[str, Any]], int]:
         params = self._clean_query_params(kwargs)
-        resp = await self.client.get(f"/datasets/{dataset_id}/documents", params=params)
-        data = resp.get("data", {})
-        return data.get("docs", []), data.get("total", 0)
+        resp = await self.client.get(
+            f"{self.DATASETS_PATH}/{dataset_id}/documents",
+            params=params,
+        )
 
-    async def upload_document(self, dataset_id: str, files: List[UploadFile]):
+        data = resp.get("data", {})
+        return (
+            data.get("docs", []),
+            data.get("total", 0),
+        )
+
+    async def upload_documents(
+            self,
+            dataset_id: str,
+            files: List[UploadFile],
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """
+        批量上传文档
+        """
         files_to_send = [
-            ("file", (f.filename, await f.read(), f.content_type or "application/octet-stream"))
+            ("file", (f.filename, await f.read(), f.content_type or "application/octet-stream",),)
             for f in files
         ]
 
-        resp = await self.client.post(f"/datasets/{dataset_id}/documents", files=files_to_send)
+        resp = await self.client.post(
+            f"{self.DATASETS_PATH}/{dataset_id}/documents",
+            files=files_to_send,
+        )
+
         docs = resp.get("data", [])
         return docs, len(docs)
+
+    async def delete_documents(
+            self,
+            dataset_id: str,
+            document_ids: List[str],
+    ):
+        resp = await self.client.delete(
+            f"{self.DATASETS_PATH}/{dataset_id}/documents",
+            json={"ids": document_ids},
+        )
+        return resp
+
+    async def delete_document_chunks(self, dataset_id: str, document_id: str, chunk_ids: List[str] = None):
+        payload = {"chunk_ids": chunk_ids} if chunk_ids is not None else None
+        resp = await self.client.delete(
+            f"{self.DATASETS_PATH}/{dataset_id}/documents/{document_id}/chunks",
+            json=payload,
+        )
+        return resp
+
+    async def download_document(
+            self,
+            dataset_id: str,
+            document_id: str,
+    ):
+        """
+        下载文档（非 JSON 响应）
+        """
+        return await self.client.get(
+            f"{self.DATASETS_PATH}/{dataset_id}/documents/{document_id}",
+            expect_json=False,
+            timeout=60,
+        )
+
+    async def parse_document_chunks(
+            self,
+            dataset_id: str,
+            document_ids: List[str],
+    ) -> Dict[str, Any]:
+        resp = await self.client.post(
+            f"{self.DATASETS_PATH}/{dataset_id}/chunks",
+            json={"document_ids": document_ids},
+        )
+        return resp
 
     async def close(self):
         await self.client.close()
@@ -77,5 +132,5 @@ class RAGFlowService:
 
 ragflow_service = RAGFlowService(
     settings.ragflow.origin_url,
-    settings.ragflow.api_key
+    settings.ragflow.api_key,
 )
