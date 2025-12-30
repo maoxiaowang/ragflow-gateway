@@ -19,6 +19,14 @@ auth_role_permissions = Table(
 )
 
 
+class InviteCode(TimestampMixin, Base):
+    __tablename__ = "auth_invite_codes"
+
+    code = Column(String, primary_key=True, index=True)
+    used = Column(Boolean, default=False)
+    used_by = Column(Integer, ForeignKey("auth_users.id"), nullable=True, index=True)
+
+
 class User(TimestampMixin, Base):
     __tablename__ = "auth_users"
     id = Column(Integer, primary_key=True, index=True)
@@ -27,19 +35,24 @@ class User(TimestampMixin, Base):
     avatar = Column(String)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
 
     roles = relationship("Role", secondary=auth_user_roles, back_populates="users")
 
+    dataset_relations = relationship("RagflowDatasetUser", back_populates="user")
+    document_relations = relationship("RagflowDocumentUser", back_populates="user")
 
-class Role(Base):
+
+class Role(TimestampMixin, Base):
     __tablename__ = "auth_roles"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
+
     permissions = relationship("Permission", secondary=auth_role_permissions, back_populates="roles")
     users = relationship("User", secondary=auth_user_roles, back_populates="roles")
 
 
-class Permission(Base):
+class Permission(TimestampMixin, Base):
     __tablename__ = "auth_permissions"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)

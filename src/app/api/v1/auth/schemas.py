@@ -36,8 +36,12 @@ PasswordError = partial(PydanticCustomError, "password_complexity")
 SYMBOLS = r"!@#$%^&*()_+-=[]{}|;:'\",.<>?/"
 
 
+def get_password_rules():
+    return COMPLEXITY_RULES[settings.password_complexity]
+
+
 def validate_complexity(v: str) -> str:
-    rules = COMPLEXITY_RULES[settings.password_complexity]
+    rules = get_password_rules()
     errors = list()
     if len(v) < rules["min_length"]:
         errors.append(f"Password must be at least {rules["min_length"]} characters long")
@@ -67,6 +71,7 @@ class UserRegister(BaseModel):
     username: str = Field(..., min_length=3)
     password1: str = Field(..., min_length=6)
     password2: str = Field(..., min_length=6)
+    invite_code: str = Field(..., min_length=8)
 
     @field_validator("password1")
     def validate_password1(cls, v):  # noqa

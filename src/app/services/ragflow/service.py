@@ -23,7 +23,6 @@ class RAGFlowService:
 
     async def list_datasets(self, **kwargs) -> Tuple[List[Dict[str, Any]], int]:
         params = self._clean_query_params(kwargs)
-        print(params)
         resp = await self.client.get(self.DATASETS_PATH, params=params)
 
         return (

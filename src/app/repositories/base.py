@@ -71,7 +71,8 @@ class BaseRepo(Generic[T]):
         result = await db.execute(stmt)
         return result.scalar_one()
 
-    async def create(self, db: AsyncSession, obj: T, commit: bool = False) -> T:
+    @staticmethod
+    async def create(db: AsyncSession, obj: T, commit: bool = False) -> T:
         db.add(obj)
         await db.flush()
         if commit:

@@ -8,7 +8,7 @@ class ServiceError(Exception):
 
     code: int = 50001
     status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
-    message: str = "Internal service error"
+    message: str = "内部服务器错误"
 
     def __init__(
             self,
@@ -30,29 +30,29 @@ class ServiceError(Exception):
 class UnauthorizedError(ServiceError):
     code = 40101
     status_code = status.HTTP_401_UNAUTHORIZED
-    message = "Authentication failed"
+    message = "用户名或密码错误"
 
 
 class TokenInvalidError(UnauthorizedError):
     code = 40102
-    message = "Token is invalid."
+    message = "凭证不可用"
 
 
 class TokenExpiredError(UnauthorizedError):
     code = 40103
-    message = "Token has expired."
+    message = "凭证已过期"
 
 
 class PermissionDeniedError(ServiceError):
     code = 40301
     status_code = status.HTTP_403_FORBIDDEN
-    message = "Permission denied"
+    message = "权限不足"
 
 
 class NotFoundError(ServiceError):
     code = 40401
     status_code = status.HTTP_404_NOT_FOUND
-    message = "Resource not found"
+    message = "没有找到资源"
 
 
 class ConflictError(ServiceError):
