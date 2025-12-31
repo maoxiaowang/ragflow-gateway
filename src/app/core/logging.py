@@ -4,8 +4,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 from app.core.settings import settings
 
-LOG_DIR = settings.log_dir
-os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(settings.log_dir, exist_ok=True)
 
 LOG_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] [%(filename)s:%(lineno)d] - %(message)s"
 
@@ -33,7 +32,7 @@ def setup_logging():
             "file_info": {
                 "()": TimedRotatingFileHandler,
                 "formatter": "default",
-                "filename": os.path.join(LOG_DIR, f"app-{settings.env}.log"),
+                "filename": os.path.join(settings.log_dir, f"app-{settings.env}.log"),
                 "when": "midnight",
                 "backupCount": 7,
                 "encoding": "utf-8",
@@ -42,7 +41,7 @@ def setup_logging():
             "file_error": {
                 "()": TimedRotatingFileHandler,
                 "formatter": "default",
-                "filename": os.path.join(LOG_DIR, f"error-{settings.env}.log"),
+                "filename": os.path.join(settings.log_dir, f"error-{settings.env}.log"),
                 "when": "midnight",
                 "backupCount": 7,
                 "encoding": "utf-8",

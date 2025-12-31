@@ -3,15 +3,19 @@ A simple FastAPI project.
 
 ## 项目结构
 ```
-FastAPIProject/
+ragflow-gateway/
 ├─ src/
 │  └─ app/
 │     ├─ api/                   # 业务接口层
 │     │  ├─ v1/                 # API 版本
 │     │  │  ├─ auth/
-│     │  │  ├─ author/
-│     │  │  ├─ book/
-│     │  │  └─ category/
+│     │  │  │  ├─ desp.py       # 模块依赖
+│     │  │  │  ├─ routes.py     # 模块路由
+│     │  │  │  ├─ schemas.py    # 模块DTO
+│     │  │  ├─ user/
+│     │  │  ├─ ragflow/
+│     ├─ cli/                   # 命令行脚本
+│     ├─ conf/                  # 配置文件
 │     ├─ core/                  # 核心配置与通用工具
 │     ├─ models/                # 数据库模型
 │     ├─ repositories/          # 通用数据访问层
@@ -78,12 +82,18 @@ alembic upgrade head
 > docker compose --env-file .env -f docker-compose.dev.yml up -d
 
 
-### 4. 开发模式运行
+### 4. 初始化数据
+初始化组和权限
+```shell
+python -m app.cli.init.perms
+```
+
+### 5. 开发模式运行
 ```shell
 uvicorn main:app --reload
 ```
 
-### 5. 启动异步任务 worker
+### 6. 启动异步任务 worker（暂时无用）
 ```shell
 taskiq worker app.tasks:broker
 ```

@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
     )
     app.state.redis = redis
     logger.info("Redis client initialized")
+
     yield
     # 关闭逻辑
     await redis.close()

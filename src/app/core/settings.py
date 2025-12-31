@@ -1,11 +1,13 @@
 import os
 from enum import Enum
-from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus
 
 from pydantic import Field, model_validator, BaseModel, PostgresDsn, RedisDsn, AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.paths import DEFAULT_CONFIG_DIR, DEFAULT_UPLOAD_DIR, DEFAULT_LOG_DIR
+from app.core.paths import ROOT_DIR
 
 __all__ = [
     "settings"
@@ -18,8 +20,6 @@ class EnvEnum(str, Enum):
     dev = "DEV"
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent  # code directory
-ROOT_DIR = BASE_DIR.parent.parent  # project directory
 ENV = os.getenv("ENV", EnvEnum.dev.value).upper()
 
 
@@ -62,8 +62,9 @@ class RAGFlowConfig(BaseSettings):
 class BaseConfig(BaseSettings):
     # 基础配置
     env: str = Field(EnvEnum.dev.value)
-    log_dir: str = Field(ROOT_DIR / "logs")
-    upload_dir: str = Field(ROOT_DIR / "uploads")
+    log_dir: str = Field(DEFAULT_LOG_DIR)
+    upload_dir: str = Field(DEFAULT_UPLOAD_DIR)
+    config_dir: str = Field(DEFAULT_CONFIG_DIR)
     login_url: Optional[str] = Field("/api/v1/auth/login")
 
     # 安全配置
@@ -109,7 +110,7 @@ class BaseConfig(BaseSettings):
         return self
 
     @model_validator(mode="before")
-    def origin_before(self):
+    def parse_cors_origins(self):
         cors_origins = self.get("cors_origins")
         self["cors_origins"] = [item.strip().rstrip("/") for item in cors_origins.split(",")]
         return self

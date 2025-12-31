@@ -32,20 +32,20 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 def has_role(role_name: str):
     def dependency(user: User = Depends(get_current_user)):
+        if user.is_superuser:  # 超级管理员默认通过
+            return user
         if role_name not in [r.name for r in user.roles]:
             raise NotFoundError("Insufficient role")
         return user
-
     return dependency
 
 
-def has_permission(permission_name: str):
+def has_perm(permission_name: str):
     def dependency(user: User = Depends(get_current_user)):
-        permissions = set()
-        for role in user.roles:
-            permissions.update([p.name for p in role.permissions])
+        if user.is_superuser:
+            return user
+        permissions = {p.name for r in user.roles for p in r.permissions}
         if permission_name not in permissions:
             raise NotFoundError("Insufficient permission")
         return user
-
     return dependency

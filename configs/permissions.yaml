@@ -1,0 +1,17 @@
+roles:
+  admin:
+    permissions:
+      - user:create
+      - user:get
+      - user:update
+      - user:delete
+      - dataset:create
+      - dataset:get
+      - dataset:update
+      - dataset:delete
+      - document:download
+      - document:upload
+      - document:delete
+  user:
+    permissions:
+      - auth:wx_login
