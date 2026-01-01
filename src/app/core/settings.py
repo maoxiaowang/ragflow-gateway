@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from os import PathLike
 from typing import Optional
 from urllib.parse import quote_plus
 
@@ -62,9 +63,9 @@ class RAGFlowConfig(BaseSettings):
 class BaseConfig(BaseSettings):
     # 基础配置
     env: str = Field(EnvEnum.dev.value)
-    log_dir: str = Field(DEFAULT_LOG_DIR)
-    upload_dir: str = Field(DEFAULT_UPLOAD_DIR)
-    config_dir: str = Field(DEFAULT_CONFIG_DIR)
+    log_dir: PathLike = Field(DEFAULT_LOG_DIR)
+    upload_dir: PathLike = Field(DEFAULT_UPLOAD_DIR)
+    config_dir: PathLike = Field(DEFAULT_CONFIG_DIR)
     login_url: Optional[str] = Field("/api/v1/auth/login")
 
     # 安全配置
@@ -73,7 +74,7 @@ class BaseConfig(BaseSettings):
     access_token_expire_minutes: Optional[int] = Field(30)
     refresh_token_expire_days: Optional[int] = Field(7)
     password_complexity: Optional[str] = Field("HIGH")
-    cors_origins: Optional[list[AnyUrl]] = Field(list())
+    cors_origins: Optional[list[Optional[AnyUrl]]] = Field(list())
 
     # 模块配置
     redis: RedisConfig
@@ -112,7 +113,10 @@ class BaseConfig(BaseSettings):
     @model_validator(mode="before")
     def parse_cors_origins(self):
         cors_origins = self.get("cors_origins")
-        self["cors_origins"] = [item.strip().rstrip("/") for item in cors_origins.split(",")]
+        if cors_origins is None:
+            self["cors_origins"] = []
+        else:
+            self["cors_origins"] = [item.strip().rstrip("/") for item in cors_origins.split(",")]
         return self
 
 
