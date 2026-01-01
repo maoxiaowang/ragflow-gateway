@@ -6,12 +6,17 @@ from app.core.db import get_db_session
 from app.core.exceptions import NotFoundError
 from app.core.jwt import decode_token
 from app.core.security import oauth2_scheme
-from app.models.auth import User
-from app.services.auth import UserService
+from app.models.iam import User
+from app.services.auth import LoginService
+from app.services.auth.registration import RegistrationService
 
 
-def get_user_service(db: AsyncSession = Depends(get_db_session)) -> UserService:
-    return UserService(db)
+def get_registration_service(db: AsyncSession = Depends(get_db_session)) -> RegistrationService:
+    return RegistrationService(db)
+
+
+def get_login_service(db: AsyncSession = Depends(get_db_session)) -> LoginService:
+    return LoginService(db)
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db_session)):
@@ -37,6 +42,7 @@ def has_role(role_name: str):
         if role_name not in [r.name for r in user.roles]:
             raise NotFoundError("Insufficient role")
         return user
+
     return dependency
 
 
@@ -48,4 +54,5 @@ def has_perm(permission_name: str):
         if permission_name not in permissions:
             raise NotFoundError("Insufficient permission")
         return user
+
     return dependency

@@ -1,5 +1,5 @@
-# FastAPIProject
-A simple FastAPI project.
+# RAGFlow Gateway
+A simple RAGFlow platform
 
 ## 项目结构
 ```
@@ -12,7 +12,7 @@ ragflow-gateway/
 │     │  │  │  ├─ desp.py       # 模块依赖
 │     │  │  │  ├─ routes.py     # 模块路由
 │     │  │  │  ├─ schemas.py    # 模块DTO
-│     │  │  ├─ user/
+│     │  │  ├─ iam/             # 身份与访问管理
 │     │  │  ├─ ragflow/
 │     ├─ cli/                   # 命令行脚本
 │     ├─ conf/                  # 配置文件

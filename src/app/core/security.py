@@ -1,5 +1,6 @@
 from fastapi import Request, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+from passlib.context import CryptContext
 
 from app.core.exceptions import UnauthorizedError
 from app.core.jwt import verify_token
@@ -18,6 +19,12 @@ class ServiceOAuth2PasswordBearer(OAuth2PasswordBearer):
 
 
 oauth2_scheme = ServiceOAuth2PasswordBearer(settings.login_url)
+
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256"],
+    default="pbkdf2_sha256",
+    deprecated="auto"
+)
 
 
 async def login_required(token: str = Depends(oauth2_scheme)) -> dict:

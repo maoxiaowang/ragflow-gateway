@@ -1,17 +1,15 @@
-import asyncio
-
 from fastapi import APIRouter, Query, Depends
 
-from app.api.v1.auth.deps import get_user_service
-from app.api.v1.auth.schemas import UserOut
+from app.api.v1.iam.deps import get_user_service
 from app.core.security import login_required
 from app.schemas import Response, PageData
-from app.services.auth import UserService
+from app.schemas.iam import UserOut
+from app.services.iam import UserService
 
-router = APIRouter(prefix="/users", tags=["user"], dependencies=[Depends(login_required)])
+router = APIRouter(prefix="/iam", tags=["user"], dependencies=[Depends(login_required)])
 
 
-@router.get("", response_model=Response[PageData[UserOut]])
+@router.get("/users", response_model=Response[PageData[UserOut]])
 async def list_users(
         page: int = Query(1, ge=1),
         page_size: int = Query(10, ge=1, le=100),

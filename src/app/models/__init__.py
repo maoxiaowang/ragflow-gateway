@@ -2,9 +2,6 @@
 数据库模型
 Database Model
 """
-from .auth import User, Role, Permission
+from .iam import *
 from .ragflow import *
-
-__all__ = [
-    "User", "Role", "Permission",
-]
+from .registration import *

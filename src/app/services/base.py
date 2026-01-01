@@ -71,7 +71,8 @@ class BaseService(Generic[T]):
     async def create(
             self,
             data: T | dict,
-            commit: bool = True
+            commit: bool = True,
+            **kwargs
     ) -> T:
         if hasattr(data, "model_dump"):
             attrs = data.model_dump()
@@ -92,9 +93,6 @@ class BaseService(Generic[T]):
         if commit:
             await self.db.commit()
             await self.db.refresh(obj)  # 确保 ORM 对象更新了 id 等字段
-        else:
-            await self.db.flush()
-
         return obj
 
     async def update(self, pk: int, data, commit: bool = True) -> T:

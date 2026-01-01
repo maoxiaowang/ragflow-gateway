@@ -24,7 +24,7 @@ class BaseRepo(Generic[T]):
     async def get_by_pk(
         self,
         db: AsyncSession,
-        pk: int,
+        pk: int | str,
         preload_options: Optional[List[LoaderOption]] = None,
         raise_not_found: bool = True
     ) -> Optional[T]:
@@ -43,7 +43,7 @@ class BaseRepo(Generic[T]):
     async def get_by_pks(
         self,
         db: AsyncSession,
-        pks: List[int],
+        pks: List[int | str],
         preload_options: Optional[List[LoaderOption]] = None,
         raise_not_found: bool = True
     ) -> List[T]:
@@ -71,23 +71,15 @@ class BaseRepo(Generic[T]):
         result = await db.execute(stmt)
         return result.scalar_one()
 
-    @staticmethod
-    async def create(db: AsyncSession, obj: T, commit: bool = False) -> T:
+    async def create(self, db: AsyncSession, obj: T) -> T:
         db.add(obj)
-        await db.flush()
-        if commit:
-            await db.commit()
         return obj
 
-    @staticmethod
-    async def bulk_create(db: AsyncSession, objs: List[T], commit: bool = False) -> List[T]:
+    async def bulk_create(self, db: AsyncSession, objs: List[T]) -> List[T]:
         db.add_all(objs)
-        await db.flush()
-        if commit:
-            await db.commit()
         return objs
 
-    async def update(self, db: AsyncSession, obj: T, attrs: dict, commit: bool = False) -> T:
+    async def update(self, db: AsyncSession, obj: T, attrs: dict) -> T:
         mapper = inspect(self.model)
         for key, value in attrs.items():
             if key not in mapper.columns:
@@ -96,17 +88,11 @@ class BaseRepo(Generic[T]):
             if value is None and not col.nullable:
                 continue
             setattr(obj, key, value)
-        await db.flush()
-        if commit:
-            await db.commit()
         return obj
 
-    async def delete(self, db: AsyncSession, pk: int, commit: bool = False) -> T:
+    async def delete(self, db: AsyncSession, pk: int) -> T:
         obj = await self.get_by_pk(db, pk)
         await db.delete(obj)
-        await db.flush()
-        if commit:
-            await db.commit()
         return obj
 
     # ----------------- 分页 / 查询扩展 -----------------
