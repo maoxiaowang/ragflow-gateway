@@ -10,6 +10,7 @@ class Role(TimestampMixin, Base):
     __tablename__ = "auth_roles"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
+    display_name = Column(String)
 
     permissions = relationship("Permission", secondary=auth_role_permissions, back_populates="roles")
     users = relationship("User", secondary=auth_user_roles, back_populates="roles")

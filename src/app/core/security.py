@@ -1,3 +1,6 @@
+import logging
+import traceback
+
 from fastapi import Request, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
@@ -14,6 +17,8 @@ from app.repositories.iam import UserRepo
 
 REDIS_TTL = 300
 user_repo = UserRepo()
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceOAuth2PasswordBearer(OAuth2PasswordBearer):
@@ -53,13 +58,14 @@ async def get_current_user(
     """
     try:
         payload = decode_token(token)
-        user_id = payload.get("sub")
+        user_id = int(payload.get("sub"))
         # Use UserRepo to get user by username without loading roles/permissions
         user = await user_repo.get_by_pk(db, user_id)
         if not user:
             raise NotFoundError(f"User with ID '{user_id}' not found")
         return user
     except Exception as e:
+        logger.debug(traceback.format_exc())
         raise NotFoundError("Invalid token") from e
 
 

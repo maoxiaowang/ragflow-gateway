@@ -1,11 +1,15 @@
-from typing import List
+from datetime import datetime
 
-from pydantic import BaseModel
-
-from app.schemas.iam.permissions import PermissionOut
+from pydantic import BaseModel, ConfigDict
 
 
 class RoleOut(BaseModel):
     id: int
     name: str
-    permissions: List[PermissionOut] = []
+    display_name: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )

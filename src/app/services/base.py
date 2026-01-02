@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, List, Tuple, Type, Union
+from typing import TypeVar, Generic, List, Tuple, Type, Union, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,24 +20,22 @@ class BaseService(Generic[T]):
             if getattr(cls, attr, None) is None:
                 raise NotImplementedError(f"{cls.__name__}.{attr} must be defined")
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, preload_options: Optional[List] = None):
         self.db = db
-        if self.preload_options is None:
-            self.preload_options = []
+        self.preload_options = preload_options or []
 
-    async def get_by_pk(self, pk: int, preload=False) -> T:
-        """获取单个对象"""
-        preload_options = self.preload_options if preload else None
-        return await self.repo.get_by_pk(
-            self.db, pk, preload_options=preload_options)
+        if isinstance(self.repo, type):
+            self.repo = self.repo()
 
-    async def get_by_pks(self, pks: List[int], preload=False) -> List[T]:
-        """获取多个对象"""
+    async def get_by_pk(self, pk: int, preload_options: Optional[List] = None) -> T:
+        options = preload_options if preload_options is not None else self.preload_options
+        return await self.repo.get_by_pk(self.db, pk, preload_options=options)
+
+    async def get_by_pks(self, pks: List[int], preload_options: Optional[List] = None) -> List[T]:
         if not pks:
             return []
-        preload_options = self.preload_options if preload else None
-        return await self.repo.get_by_pks(
-            self.db, pks, preload_options=preload_options)
+        options = preload_options if preload_options is not None else self.preload_options
+        return await self.repo.get_by_pks(self.db, pks, preload_options=options)
 
     async def get_all(self) -> List[T]:
         return await self.repo.get_all(self.db)
@@ -49,8 +47,9 @@ class BaseService(Generic[T]):
             filters: dict | None = None,
             order_by: str | None = None,
             desc: bool = False,
-            detail: bool = False,
+            preload_options: Optional[List] = None,
     ) -> Tuple[List[T], int]:
+        options = preload_options if preload_options is not None else self.preload_options
         items, total = await self.repo.get_paged(
             self.db,
             page=page,
@@ -58,7 +57,7 @@ class BaseService(Generic[T]):
             filters=filters,
             order_by=order_by,
             desc_order=desc,
-            preload_options=self.preload_options if detail else None,
+            preload_options=options
         )
         return items, total
 

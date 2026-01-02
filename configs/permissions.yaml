@@ -1,5 +1,6 @@
 roles:
   admin:
+    display_name: 管理员
     permissions:
       - user:create
       - user:retrieve
@@ -18,5 +19,6 @@ roles:
       - document:upload
       - document:delete
   user:
+    display_name: 普通用户
     permissions:
       - auth:wx_login

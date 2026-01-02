@@ -15,5 +15,5 @@ def get_role_service(db: AsyncSession = Depends(get_db_session)) -> RoleService:
     return RoleService(db)
 
 
-def get_permission_service(db: AsyncSession) -> PermissionService:
+def get_permission_service(db: AsyncSession = Depends(get_db_session)) -> PermissionService:
     return PermissionService(db)

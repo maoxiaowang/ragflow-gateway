@@ -194,6 +194,7 @@ class BaseRepo(Generic[T]):
     async def get_paged(
             self,
             db: AsyncSession,
+            *,
             page: int = 1,
             page_size: int = 10,
             filters: Optional[dict] = None,
@@ -201,7 +202,6 @@ class BaseRepo(Generic[T]):
             desc_order: bool = False,
             preload_options: Optional[List[LoaderOption]] = None
     ) -> Tuple[List[T], int]:
-
         count_stmt = select(func.count(self.pk_column))
         count_stmt = self._apply_filters(count_stmt, filters)
         total_result = await db.execute(count_stmt)

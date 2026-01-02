@@ -16,9 +16,14 @@ class UserRepo(BaseRepo[User]):
             username: str,
             password: str,
             roles: Optional[List[Role]] = None,
+            **kwargs
     ) -> User:
         roles = roles or []
-        user = User(username=username, hashed_password=password)
+        user = User(
+            username=username,
+            hashed_password=password,
+            **kwargs
+        )
         user.roles.extend(roles)
         await self.create(db, user)
         return user
@@ -53,7 +58,8 @@ class UserRepo(BaseRepo[User]):
             db: AsyncSession,
             username: str,
             load_roles: bool = False,
-            load_permissions: bool = False
+            load_permissions: bool = False,
+            raise_not_found: bool = False,
     ) -> Optional[User]:
         """
         Get user by username with optional roles and permissions preloading
@@ -63,5 +69,6 @@ class UserRepo(BaseRepo[User]):
             db=db,
             field_name="username",
             value=username,
-            preload_options=preload_options
+            preload_options=preload_options,
+            raise_not_found=raise_not_found,
         )
