@@ -1,8 +1,10 @@
 from datetime import datetime
+from typing import List
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from app.core.validators.password import validate_complexity
+from app.schemas.iam.role import RoleOut
 
 
 class UserCreate(BaseModel):
@@ -20,8 +22,20 @@ class UserOut(BaseModel):
     nickname: str | None = None
     is_active: bool
     avatar: str | None = None
+    is_superuser: bool
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+class UserCheckPermOut(BaseModel):
+    id: int
+    is_active: bool
+    is_superuser: bool
+    roles: List[RoleOut] = []
 
     model_config = ConfigDict(
         from_attributes=True

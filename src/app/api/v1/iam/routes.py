@@ -1,12 +1,19 @@
 from fastapi import APIRouter, Query, Depends
 
 from app.api.v1.iam.deps import get_user_service
-from app.core.security import login_required
+from app.core.security import login_required, has_role
 from app.schemas import Response, PageData
 from app.schemas.iam import UserOut
 from app.services.iam import UserService
 
-router = APIRouter(prefix="/iam", tags=["user"], dependencies=[Depends(login_required)])
+router = APIRouter(
+    prefix="/iam",
+    tags=["user"],
+    dependencies=[
+        Depends(login_required),
+        Depends(has_role("admin"))
+    ]
+)
 
 
 @router.get("/users", response_model=Response[PageData[UserOut]])

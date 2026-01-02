@@ -1,20 +1,14 @@
 from typing import List, Optional
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models import User, Role
 from app.repositories.base import BaseRepo
 
 
 class UserRepo(BaseRepo[User]):
-    def __init__(self):
-        super().__init__(User)
-
-    @staticmethod
-    async def get_by_username(db: AsyncSession, username: str) -> Optional[User]:
-        stmt = await db.execute(select(User).where(User.username == username))
-        return stmt.scalar_one_or_none()
+    model = User
 
     async def create_user(
             self,
@@ -28,3 +22,46 @@ class UserRepo(BaseRepo[User]):
         user.roles.extend(roles)
         await self.create(db, user)
         return user
+
+    @staticmethod
+    def _make_preload_options(load_roles: bool, load_permissions: bool) -> List:
+        options = list()
+        if load_roles:
+            if load_permissions:
+                options.append(selectinload(User.roles).selectinload(Role.permissions))
+            else:
+                options.append(selectinload(User.roles))
+        return options
+
+    async def get_by_id(
+            self,
+            db: AsyncSession,
+            user_id: int,
+            load_roles: bool = False,
+            load_permissions: bool = False
+    ) -> Optional[User]:
+        preload_options = self._make_preload_options(load_roles, load_permissions)
+        return await self.get_by_unique_field(
+            db=db,
+            field_name=self.pk_column.key,
+            value=user_id,
+            preload_options=preload_options,
+        )
+
+    async def get_by_username(
+            self,
+            db: AsyncSession,
+            username: str,
+            load_roles: bool = False,
+            load_permissions: bool = False
+    ) -> Optional[User]:
+        """
+        Get user by username with optional roles and permissions preloading
+        """
+        preload_options = self._make_preload_options(load_roles, load_permissions)
+        return await self.get_by_unique_field(
+            db=db,
+            field_name="username",
+            value=username,
+            preload_options=preload_options
+        )

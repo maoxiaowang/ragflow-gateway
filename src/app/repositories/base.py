@@ -1,3 +1,7 @@
+"""
+Base Repositories
+"""
+import warnings
 from typing import Type, TypeVar, List, Tuple, Generic, Any, Optional
 
 from sqlalchemy import select, inspect, func, Column, desc, asc, and_
@@ -10,42 +14,86 @@ from app.core.exceptions import NotFoundError
 T = TypeVar("T", bound=Base)
 
 
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
+
 class BaseRepo(Generic[T]):
-    """
-    Repository 基类
-    """
     model: Type[T]
     pk_column: Column
 
-    def __init__(self, model: Type[T]):
-        self.model = model
-        self.pk_column = inspect(self.model).primary_key[0]
+    def __init__(self, model: Type[T] = None):
+        self.model = model or getattr(self, "model", None)
+        if self.model is None:
+            raise TypeError("You must specify a model")
 
-    async def get_by_pk(
-        self,
-        db: AsyncSession,
-        pk: int | str,
-        preload_options: Optional[List[LoaderOption]] = None,
-        raise_not_found: bool = True
+        pk_columns = list(inspect(self.model).primary_key)
+        if not pk_columns:
+            raise TypeError(f"{self.model.__name__} must have a primary key")
+
+        if len(pk_columns) > 1:
+            warnings.warn(
+                f"{self.model.__name__} has a composite primary key, "
+                f"but BaseRepo only supports single PK. Using the first PK column: {pk_columns[0].name}"
+            )
+
+        self.pk_column = pk_columns[0]
+
+    async def get_by_unique_field(
+            self,
+            db: AsyncSession,
+            field_name: str,
+            value: Any,
+            preload_options: Optional[List[LoaderOption]] = None,
+            raise_not_found: bool = True
     ) -> Optional[T]:
-        stmt = select(self.model)
+        """
+        Get a single object by a unique field (e.g., username, email).
+
+        Args:
+            db: AsyncSession
+            field_name: the column name on the model
+            value: the value to filter
+            preload_options: optional SQLAlchemy loader options
+            raise_not_found: whether to raise NotFoundError if not found
+
+        Returns:
+            Optional[T]: the loaded object or None
+        """
+        column: Column = getattr(self.model, field_name)
+        stmt = select(self.model).where(column == value)
         if preload_options:
             stmt = stmt.options(*preload_options)
-        stmt = stmt.where(self.pk_column == pk)
 
         result = await db.execute(stmt)
-        obj: Optional[T] = result.scalars().first()
+        obj: Optional[T] = result.scalar_one_or_none()
 
         if not obj and raise_not_found:
-            raise NotFoundError(f"{self.model.__name__} {pk} not found")
+            raise NotFoundError(f"{self.model.__name__} with {field_name}={value} not found")
         return obj
 
+    async def get_by_pk(
+            self,
+            db: AsyncSession,
+            pk: int | str,
+            preload_options: Optional[List[LoaderOption]] = None,
+            raise_not_found: bool = True
+    ) -> Optional[T]:
+        """
+        Get an object by its primary key, using get_by_unique_field internally.
+        """
+        return await self.get_by_unique_field(
+            db=db,
+            field_name=self.pk_column.key,  # or self.pk_column.name depending on ORM setup
+            value=pk,
+            preload_options=preload_options,
+            raise_not_found=raise_not_found
+        )
+
     async def get_by_pks(
-        self,
-        db: AsyncSession,
-        pks: List[int | str],
-        preload_options: Optional[List[LoaderOption]] = None,
-        raise_not_found: bool = True
+            self,
+            db: AsyncSession,
+            pks: List[int | str],
+            preload_options: Optional[List[LoaderOption]] = None,
+            raise_not_found: bool = True
     ) -> List[T]:
         if not pks:
             return []
@@ -95,7 +143,6 @@ class BaseRepo(Generic[T]):
         await db.delete(obj)
         return obj
 
-    # ----------------- 分页 / 查询扩展 -----------------
     def _parse_filter(self, key: str, value: Any):
         parts = key.split("__")
         column_name = parts[0]
@@ -145,22 +192,21 @@ class BaseRepo(Generic[T]):
         return stmt.offset(offset).limit(page_size)
 
     async def get_paged(
-        self,
-        db: AsyncSession,
-        page: int = 1,
-        page_size: int = 10,
-        filters: Optional[dict] = None,
-        order_by: Optional[str] = None,
-        desc_order: bool = False,
-        preload_options: Optional[List[LoaderOption]] = None
+            self,
+            db: AsyncSession,
+            page: int = 1,
+            page_size: int = 10,
+            filters: Optional[dict] = None,
+            order_by: Optional[str] = None,
+            desc_order: bool = False,
+            preload_options: Optional[List[LoaderOption]] = None
     ) -> Tuple[List[T], int]:
-        # 统计总数
+
         count_stmt = select(func.count(self.pk_column))
         count_stmt = self._apply_filters(count_stmt, filters)
         total_result = await db.execute(count_stmt)
         total = total_result.scalar_one()
 
-        # 查询数据
         stmt = select(self.model)
         stmt = self._apply_filters(stmt, filters)
         stmt = self._apply_ordering(stmt, order_by, desc_order)
