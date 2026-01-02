@@ -84,7 +84,7 @@ class BaseConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="_",
         env_nested_max_split=1,
-        env_file=ROOT_DIR / ".env" if ENV == EnvEnum.dev.value else None,
+        env_file=ROOT_DIR / ".env",
         env_file_encoding="utf-8"
     )
 
@@ -121,16 +121,12 @@ class BaseConfig(BaseSettings):
 
 
 class DevelopmentConfig(BaseConfig):
-    debug: bool = True
+    debug: Optional[bool] = Field(True)
     access_token_expire_minutes: int = Field(60 * 24 * 30)
     refresh_token_expire_days: int = Field(90)
 
 
 class TestingConfig(BaseConfig):
-    debug: bool = False
-
-
-class StagingConfig(BaseConfig):
     debug: bool = False
 
 

@@ -1,14 +1,10 @@
 import asyncio
-import sys
 from logging.config import fileConfig
-from pathlib import Path
 
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
-
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 
 import app.models
 from app.core.db import Base

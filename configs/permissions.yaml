@@ -2,11 +2,16 @@ roles:
   admin:
     permissions:
       - user:create
-      - user:get
+      - user:retrieve
       - user:update
       - user:delete
+      - group:create
+      - group:retrieve
+      - group:update
+      - group:delete
+      - permission:retrieve
       - dataset:create
-      - dataset:get
+      - dataset:retrieve
       - dataset:update
       - dataset:delete
       - document:download

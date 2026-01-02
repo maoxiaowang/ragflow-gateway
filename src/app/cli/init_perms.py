@@ -7,9 +7,8 @@ from sqlalchemy.future import select
 from app.core.db import async_session
 from app.core.settings import settings
 from app.models import Role, Permission
-from app.models.auth import auth_role_permissions
+from app.models.iam import auth_role_permissions
 
-print(Path(settings.config_dir))
 PERMISSIONS_YAML = Path(settings.config_dir) / "permissions.yaml"
 
 
