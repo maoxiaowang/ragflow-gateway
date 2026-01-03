@@ -2,7 +2,8 @@ import string
 from secrets import choice
 from typing import List
 
-from app.core.exceptions import ConflictError, UnauthorizedError
+from app.constants.roles import SystemRoles
+from app.core.exceptions import ConflictError
 from app.models import User, InviteCode
 from app.repositories.iam import UserRepo, RoleRepo
 from app.repositories.registration import InviteCodeRepo
@@ -46,8 +47,10 @@ class RegistrationService(BaseService[User]):
         invite = await self.validate_invite_code(data.invite_code)
 
         # Create user and assign default role
-        default_role = await self.role_repo.get_or_create(self.db, "user")
         user_data = UserCreate(username=data.username, password=data.password1)
+        default_role, created = await self.role_repo.get_or_create(
+            self.db, field_name="name", value=SystemRoles.DEFAULT
+        )
         user = await self.repo.create_user(
             db=self.db,
             username=user_data.username,
@@ -60,4 +63,3 @@ class RegistrationService(BaseService[User]):
         await self.db.commit()
         await self.db.refresh(user)
         return user
-

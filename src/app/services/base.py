@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, List, Tuple, Type, Union, Optional
+from typing import TypeVar, Generic, List, Tuple, Type, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,26 +63,44 @@ class BaseService(Generic[T]):
 
     async def check_before_create(self, data: dict):
         """
-        创建前的检查钩子，子类可以重写
+        Hook method for pre creation check
         """
         pass
+
+    @staticmethod
+    def _prepare_create_data(data: T | dict) -> dict:
+        """
+        Prepare data for creating a new object.
+        """
+        if hasattr(data, "model_dump"):
+            return data.model_dump()
+        elif isinstance(data, dict):
+            return data
+        else:
+            raise TypeError("data must be a Pydantic model or dict")
+
+    @staticmethod
+    def _prepare_update_data(data: T | dict) -> dict:
+        """
+        Prepare data for updating an existing object.
+        Only include fields explicitly set by user (exclude unset).
+        """
+        if hasattr(data, "model_dump"):
+            return data.model_dump(exclude_unset=True)  # only updated fields
+        elif isinstance(data, dict):
+            return data
+        else:
+            raise TypeError("data must be a Pydantic model or dict")
 
     async def create(
             self,
             data: T | dict,
             commit: bool = True,
-            **kwargs
     ) -> T:
-        if hasattr(data, "model_dump"):
-            attrs = data.model_dump()
-        elif isinstance(data, dict):
-            attrs = data
-        else:
-            raise TypeError("data must be a Pydantic model or dict")
-
+        attrs = self._prepare_create_data(data)
         await self.check_before_create(attrs)
 
-        # 排除非自身字段
+        # Remove non-self fields
         model_fields = {c.name for c in self.model.__table__.columns}
         filtered_attrs = {k: v for k, v in attrs.items() if k in model_fields}
 
@@ -91,14 +109,11 @@ class BaseService(Generic[T]):
 
         if commit:
             await self.db.commit()
-            await self.db.refresh(obj)  # 确保 ORM 对象更新了 id 等字段
+            await self.db.refresh(obj)
         return obj
 
     async def update(self, pk: int, data, commit: bool = True) -> T:
-        if hasattr(data, "model_dump"):
-            attrs = data.model_dump(exclude_unset=True)
-        else:
-            attrs = data
+        attrs = self._prepare_update_data(data)
 
         obj = await self.get_by_pk(pk)
         await self.repo.update(self.db, obj, attrs)

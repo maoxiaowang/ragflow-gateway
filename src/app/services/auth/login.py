@@ -21,12 +21,14 @@ class LoginService(BaseService[User]):
 
     async def authenticate(self, db: AsyncSession, username: str, password: str) -> User | None:
         user = await self.repo.get_by_username(db, username)
-        if user and self.verify_password(password, user.hashed_password):
+        if user and self.verify_password(password, user.password):
             return user
         return None
 
     async def login(self, username: str, password: str) -> dict[str, str]:
         user = await self.authenticate(self.db, username, password)
+        if not user:
+            raise UnauthorizedError()
         access_token = create_access_token(user.id)
         refresh_token = create_refresh_token(user.id)
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}

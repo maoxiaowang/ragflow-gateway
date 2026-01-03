@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 
 from app.core.db import Base
@@ -12,9 +12,13 @@ class User(TimestampMixin, Base):
     username = Column(String, unique=True, index=True)
     nickname = Column(String)
     avatar = Column(String)
-    hashed_password = Column(String)
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
+    password = Column(String)
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_superuser = Column(Boolean, default=False, nullable=False)
+
+    last_login_at = Column(DateTime(timezone=True), default=None)
+    email  = Column(String(64), unique=True, index=True, nullable=True)
+    mobile = Column(String(32), unique=True, index=True, nullable=True)
 
     roles = relationship("Role", secondary=auth_user_roles, back_populates="users")
 

@@ -51,8 +51,28 @@ async def create_user(
         req: CreateUserRequest,
         service: UserService = Depends(get_user_service)
 ):
-    user = await service.create({"username": req.username, "password": req.password})
+    user = await service.create_user(req)
     return Response(data=user)
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
+):
+    result = await service.delete_user(user_id, current_user.id)
+    return Response(data=result)
+
+
+@router.delete("/users")
+async def delete_users_batch(
+    user_ids: List[int],
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_user),
+):
+    result = await service.delete_users_batch(user_ids, current_user.id)
+    return Response(data=result)
 
 
 @router.get("/users/{user_id}/roles", response_model=Response[List[RoleOut]])
@@ -67,7 +87,7 @@ async def list_user_roles(
     return Response(data=roles)
 
 
-@router.post("/users/{user_id}/roles", response_model=Response[None])
+@router.post("/users/{user_id}/roles", response_model=Response[List[RoleOut]])
 async def assign_user_roles(
         req: AssignRolesRequest,
         user_id: int = Path(..., ge=1),
@@ -76,21 +96,21 @@ async def assign_user_roles(
     """
     Assign roles to a user
     """
-    await service.assign_roles(user_id, req.role_ids)
-    return Response()
+    roles = await service.assign_roles(user_id, req.role_ids)
+    return Response(data=roles)
 
 
-@router.post("/users/disable", response_model=Response[None])
+@router.post("/users/disable", response_model=Response[List[UserOut]])
 async def disable_users(
         req: DisableUsersRequest,
         service: UserService = Depends(get_user_service),
-        user: User = Depends(get_current_user)
+        user: User = Depends(get_current_user),
 ):
     """
     Disable or enable multiple users
     """
-    await service.disable_users(req.user_ids, user.id, req.disable)
-    return Response()
+    users = await service.disable_users(req.user_ids, user.id, req.disable)
+    return Response(data=users)
 
 
 @router.get("/roles", response_model=Response[PageData[RoleOut]])

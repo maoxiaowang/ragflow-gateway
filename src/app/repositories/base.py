@@ -5,6 +5,7 @@ import warnings
 from typing import Type, TypeVar, List, Tuple, Generic, Any, Optional
 
 from sqlalchemy import select, inspect, func, Column, desc, asc, and_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.interfaces import LoaderOption
 
@@ -67,7 +68,7 @@ class BaseRepo(Generic[T]):
         obj: Optional[T] = result.scalar_one_or_none()
 
         if not obj and raise_not_found:
-            raise NotFoundError(f"{self.model.__name__} with {field_name}={value} not found")
+            raise NotFoundError(f"{self.model.__name__} with {field_name}={value} not found.")
         return obj
 
     async def get_by_pk(
@@ -105,8 +106,101 @@ class BaseRepo(Generic[T]):
         if raise_not_found:
             missing = set(pks) - {getattr(o, self.pk_column.name) for o in objs}
             if missing:
-                raise NotFoundError(f"{self.model.__name__} {missing} not found")
+                raise NotFoundError(f"{self.model.__name__} {missing} not found.")
         return objs
+
+    async def get_or_none(
+            self,
+            db: AsyncSession,
+            *,
+            field_name: str,
+            value: Any,
+            preload_options: Optional[List[LoaderOption]] = None,
+    ) -> Optional[T]:
+        """
+        Get a single object by a unique field, or return None if not found.
+
+        This is a semantic wrapper around `get_by_unique_field` with
+        `raise_not_found=False`, useful for service-layer logic where
+        "not found" is not an exceptional case.
+
+        Args:
+            db: SQLAlchemy AsyncSession
+            field_name: Name of the unique column on the model
+            value: Value to filter by
+            preload_options: Optional SQLAlchemy loader options
+
+        Returns:
+            The matched object, or None if not found
+        """
+        return await self.get_by_unique_field(
+            db=db,
+            field_name=field_name,
+            value=value,
+            preload_options=preload_options,
+            raise_not_found=False,
+        )
+
+    async def get_or_create(
+            self,
+            db: AsyncSession,
+            *,
+            field_name: str,
+            value: Any,
+            defaults: Optional[dict] = None,
+    ) -> tuple[T, bool]:
+        """
+        Get an object by a unique field, or create it if it does not exist.
+
+        This method is safe for concurrent scenarios. It relies on a database
+        unique constraint and handles race conditions by catching
+        IntegrityError during flush.
+
+        Note:
+            - This method performs a `flush()` but does NOT commit the transaction.
+            - Transaction boundaries (commit / rollback) should be handled
+              by the service layer.
+
+        Args:
+            db: SQLAlchemy AsyncSession
+            field_name: Name of the unique column on the model
+            value: Value of the unique field
+            defaults: Additional fields used only when creating the object
+
+        Returns:
+            A tuple of (object, created):
+                - object: The retrieved or newly created ORM object
+                - created: True if the object was created, False if it already existed
+        """
+        obj = await self.get_or_none(
+            db,
+            field_name=field_name,
+            value=value,
+        )
+        if obj:
+            return obj, False
+
+        defaults = defaults or {}
+        data = {field_name: value, **defaults}
+        obj = self.model(**data)
+        db.add(obj)
+
+        try:
+            # Flush to trigger database-level unique constraints
+            await db.flush()
+            return obj, True
+        except IntegrityError:
+            # Another transaction may have created the object concurrently
+            await db.rollback()
+
+            # Re-fetch the existing object
+            obj = await self.get_by_unique_field(
+                db,
+                field_name=field_name,
+                value=value,
+                raise_not_found=True,
+            )
+            return obj, False
 
     async def get_all(self, db: AsyncSession) -> List[T]:
         stmt = select(self.model)

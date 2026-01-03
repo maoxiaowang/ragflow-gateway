@@ -59,3 +59,8 @@ class ConflictError(ServiceError):
     code = 40901
     status_code = status.HTTP_409_CONFLICT
     message = "Resource conflict"
+
+
+class ServiceValidationError(ServiceError):
+    code = 42201
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT

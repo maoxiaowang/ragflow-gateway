@@ -12,7 +12,6 @@ class CreateUserRequest(BaseModel):
     password: str
     nickname: Optional[str]
     is_active: Optional[bool] = True
-    is_superuser: Optional[bool] = False
 
 
 class DisableUsersRequest(BaseModel):
