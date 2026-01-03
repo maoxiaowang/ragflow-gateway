@@ -122,7 +122,3 @@ python -m app.cli.init_perms
 
 ## 文档
 - [开发手册](docs/development_guide.md)
-- [生产环境](docs/deployment/production.md)
-- [数据库迁移](docs/migration.md)
-- [架构说明](docs/architecture/overview.md)
-- [API 文档](docs/api.md)
