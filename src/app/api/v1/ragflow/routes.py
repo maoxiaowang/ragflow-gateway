@@ -3,14 +3,20 @@ from typing import Optional, List
 from fastapi import APIRouter, Query, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
 
-from app.api.v1.ragflow.schemas import (
-    Dataset, Document, UploadDocumentResponse, HandleDocumentsRequest,
-    HandleDocumentsResponse
-)
-from app.api.v1.ragflow.utils import get_filename_from_response, get_content_disposition
+from app.api.v1.ragflow.schemas import HandleDocumentsRequest
+from ragflow_async_sdk.models import Dataset, Document
+from ragflow_async_sdk import AsyncRAGFlowClient
+from app.api.v1.ragflow.utils import get_content_disposition
 from app.core.security import login_required
+from app.core.settings import settings
 from app.schemas import Response, PageData
-from app.services.ragflow.service import ragflow_service as service
+from ragflow_async_sdk.utils.files import file_from_bytes
+
+
+client = AsyncRAGFlowClient(
+    server_url=settings.ragflow.origin_url,
+    api_key=settings.ragflow.api_key,
+)
 
 router = APIRouter(prefix="/ragflow", tags=["ragflow"], dependencies=[Depends(login_required)])
 
@@ -22,19 +28,21 @@ async def list_datasets(
         order_by: Optional[str] = Query(None),
         desc: Optional[bool] = Query(None),
         _id: Optional[str] = Query(None),
+        name: Optional[str] = Query(None),
 ):
-    items, total = await service.list_datasets(
+    datasets, total = await client.datasets.list_datasets(
         page=page,
         page_size=page_size,
-        orderby=order_by,
+        order_by=order_by,
         desc=desc,
-        id=_id,
+        dataset_id=_id,
+        name=name
     )
     page_data = PageData(
         total=total,
         page=page,
         page_size=page_size,
-        items=items
+        items=datasets
     )
     return Response(data=page_data)
 
@@ -49,7 +57,7 @@ async def list_documents(
         keywords: Optional[str] = Query(None),
         suffix: Optional[str] = Query(None),
 ):
-    items, total = await service.list_documents(
+    items, total = await client.documents.list_documents(
         dataset_id,
         page=page,
         page_size=page_size,
@@ -68,27 +76,26 @@ async def list_documents(
 
 
 @router.post("/datasets/{dataset_id}/documents",
-             response_model=Response[List[UploadDocumentResponse]])
+             response_model=Response[List[Document]])
 async def upload_documents(
         dataset_id: str,
         files: List[UploadFile] = File(...),
 ):
-    docs, count = await service.upload_documents(dataset_id, files=files)
-    return Response(data=[UploadDocumentResponse(**doc) for doc in docs])
+    files = [file_from_bytes(f.filename, await f.read(), f.content_type) for f in files]
+    docs = await client.documents.upload_documents(dataset_id, files=files)
+    return Response(data=docs)
 
 
-@router.delete("/datasets/{dataset_id}/documents",
-               response_model=Response[HandleDocumentsResponse])
+@router.delete("/datasets/{dataset_id}/documents")
 async def delete_documents(dataset_id: str, req: HandleDocumentsRequest):
-    resp = await service.delete_documents(dataset_id, req.document_ids)
-    return Response(data=HandleDocumentsResponse(**resp))
+    await client.documents.delete_documents(dataset_id, req.document_ids)
+    return Response()
 
 
-@router.delete("/datasets/{dataset_id}/documents/{document_id}/chunks",
-               response_model=HandleDocumentsResponse)
+@router.delete("/datasets/{dataset_id}/documents/{document_id}/chunks")
 async def delete_document_chunks(dataset_id: str, document_id: str):
-    resp = await service.delete_document_chunks(dataset_id, document_id)
-    return Response(data=HandleDocumentsResponse(**resp))
+    await client.chunks.delete_chunks(dataset_id, document_id)
+    return Response()
 
 
 @router.get("/datasets/{dataset_id}/documents/{document_id}")
@@ -96,25 +103,20 @@ async def download_document(
         dataset_id: str,
         document_id: str
 ):
-    resp = await service.download_document(dataset_id, document_id)
-    if resp.status_code != 200:
-        return Response()
-    filename = get_filename_from_response(resp)
-
+    file = await client.documents.download_document(dataset_id, document_id)
     return StreamingResponse(
-        resp.aiter_bytes(),
-        media_type="application/octet-stream",
+        file.stream,
+        media_type=file.content_type,
         headers={
-            "Content-Disposition": get_content_disposition(filename)
+            "Content-Disposition": get_content_disposition(file.filename)
         },
     )
 
 
-@router.post("/datasets/{dataset_id}/chunks",
-             response_model=Response[HandleDocumentsResponse])
+@router.post("/datasets/{dataset_id}/chunks")
 async def parse_document_chunks(
         dataset_id: str,
         req: HandleDocumentsRequest,
 ):
-    resp = await service.parse_document_chunks(dataset_id, req.document_ids)
-    return Response(data=HandleDocumentsResponse(**resp))
+    await client.documents.parse_documents(dataset_id, req.document_ids)
+    return Response()

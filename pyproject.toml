@@ -16,6 +16,7 @@ dependencies = [
     "python-jose>=3.5.0",
     "python-multipart>=0.0.21",
     "pyyaml>=6.0.3",
+    "ragflow-async-sdk>=0.1.0",
     "redis>=7.1.0",
     "uvicorn>=0.40.0",
 ]
